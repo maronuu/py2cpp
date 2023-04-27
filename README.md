@@ -1,27 +1,33 @@
-## 問題2: Python関数からC++関数へのトランスパイラ レポート
-### 入力例と結果の確認
+# py2cpp
+
+## What
+A transpiler that converts a Python function into a C++ function. Only subset of Python spec is supported.
+
+## Usage
 ```bash
+$ cd example
 $ python sample.py > result.cpp
 ```
-`result_with_comment.cpp`は`result.cpp`の出力にコメントを加えたものである。
-### 追加の仕様
-#### PythonのListの要素の型
-Pythonではlistに異なる型の要素を格納することが許されているが、C++の配列では禁止されている。変換元のコードでlistに複数のTypeが確認された場合、errorとした。
+`example/result_with_comment.cpp` is the output `result.cpp` with added comments.
 
-#### 型変換
-intとfloatの間の型変換について、以下を定めた。`t`, `v`はint or floatの変数とする。
+## Spec
+### Types of elements in Python's List
+In Python, a list can store elements of different types, but in C++ arrays, this is not allowed. If multiple types are found in a list in the source code, it is considered an error.
+
+### Type conversion
+For type conversion between int and float, the following rules are defined. t, v are variables of int or float.
 
 |Statement|Specification|
 |---|---|
-|`t = v` (tは既に定義済み)|tとvは同じ型のみ|
-|`t += v`|tとvは同じ型のみ|
-|`t -= v`|tとvは同じ型のみ|
-|`t *= v`|tとvは同じ型のみ|
-|`t /= v`|tはintのみ|
-|`t //= v`|t, v共にintのみ|
-|`t %= v`|t, v共にintのみ|
+|`t = v`  (t is already defined)|t and v must be of the same type|
+|`t += v`|t and v must be of the same type|
+|`t -= v`|t and v must be of the same type|
+|`t *= v`|t and v must be of the same type|
+|`t /= v`|t must be int|
+|`t //= v`|t, v both must be int|
+|`t %= v`|t, v both must be int|
 
-#### Div(`/`, `/=`)
+### Div(`/`, `/=`)
 
 |Python|C++|
 |---|---|
@@ -30,7 +36,7 @@ intとfloatの間の型変換について、以下を定めた。`t`, `v`はint 
 |`(FLOAT)/[=](INT)`|`(DOUBLE)/[=](INT)`|
 |`(FLOAT)/[=](FLOAT)`|`(DOUBLE)/[=](DOUBLE)`|
 
-#### Floor Div, Modulo (`//`, `//=`, `%`, `%=`)
+### Floor Div, Modulo (`//`, `//=`, `%`, `%=`)
 
 |Python|C++|
 |---|---|
@@ -38,22 +44,14 @@ intとfloatの間の型変換について、以下を定めた。`t`, `v`はint 
 |`(INT)%[=](INT)`|`(INT)%[=](INT)`|
 |Other Operands|Not Supported|
 
-#### Empty List `[]`
-今回のトランスパイラでは、配列の要素の参照と書き込みのみを対応した。
-Empty List `[]`で初期化した変数は、(1)Type Annotationを付ける、(2)型が分かっている要素をAppendする、(3)引数型が分かっている関数の引数として指定する、といった条件がなければ要素型を確定できない。そのためEmpty List `[]`による初期化を禁止した。
+### Empty List `[]`
+For this transpiler, only array element reference and writing are supported.
+If a variable is initialized with an Empty List [] and there are no conditions like 
+- (1) attaching Type Annotation,
+- (2) appending an element with a known type, or 
+- (3) specifying as an argument of a function with a known argument type, the element type cannot be determined. 
 
-#### Multiple Return Types
-Pythonの関数は異なる型の変数をReturnすることができるが、C++では返り値の型を指定しなければならないため、それが不可能である。そのため異なるReturn Typeを禁止した。
+Therefore, initialization with an Empty List [] is prohibited.
 
-### 工夫した点
-- `Statement`, `Expression`という基底クラスを継承する形で、文と式のClassを定義した。
-- `Expression`のサブクラスはいずれも`cpp_str`というPropertyを持っていて、式の変換に必要な情報をコンストラクタに渡すことでClassの内部でC++のソースに変換している。また、`Expression`のサブクラスのコンストラクタはいずれも`type`を引数に取っていて、Statementにおける型のチェックやC++ソースの生成に使用している。
-- `Statement`のサブクラスはいずれも`cpp_str`というPropertyを持っている。
-- process_hoge系の関数は、[1]ASTの親子関係の追跡、[2]ASTのノードの情報の抽出・整理を担当していて、いずれも対応するClassのインスタンスを返す。これによりソースの生成部分は`ast`モジュールに関する処理とは切り離される。
-- ASTのモジュールの構造・Pythonの文法規則にできるだけ近い形で、これらのサブクラスを定義した。
-### 実装しきれなかった機能
-- Overflowの検知
-    - Pythonのintは任意長だがC++のintは通常32bitのため、Overflowの検知が必要になる。Transpilerでやるべきかは議論の余地があるが、言語間の差異の吸収という意味で追加を検討した機能の１つだった。
-- 例外が発生した時に、原因となったStatementの行番号を出力してよりRichなエラーメッセージを出力する機能。
-- `()`の冗長さを解消
-    - 現在の実装では、`Expression`の`cpp_str`が両端に`()`を付けて返す方針にしていて、Operatorの優先度やStatement側からの`()`関連への追加情報の付与をしていない。そのためASTの分岐がある度に毎回`()`が付属している。
+### Multiple Return Types
+Python functions can return variables of different types, but in C++, the return type must be specified, making it impossible. Therefore, different Return Types are prohibited.
