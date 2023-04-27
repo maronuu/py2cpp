@@ -5,7 +5,6 @@ A transpiler that converts a Python function into a C++ function. Only subset of
 
 ## Usage
 ```bash
-$ cd example
 $ python sample.py > result.cpp
 ```
 `example/result_with_comment.cpp` is the output `result.cpp` with added comments.
